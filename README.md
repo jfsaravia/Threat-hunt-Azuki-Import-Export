@@ -39,7 +39,8 @@ DeviceLogonEvents
 | project TimeGenerated, DeviceName, AccountName, ActionType, LogonType , FailureReason, RemoteIP, InitiatingProcessRemoteSessionDeviceName
 ```
 
-![image.png](attachment:292b5450-97aa-4ae6-957c-28b04658f36b:image.png)
+[<img width="1722" height="547" alt="image" src="https://github.com/user-attachments/assets/c05f0bd8-e748-4cb7-9df8-605d1eeae425" />
+](https://www.notion.so/image/attachment%3A292b5450-97aa-4ae6-957c-28b04658f36b%3Aimage.png?table=block&id=2c4fc6f5-ad50-8035-9010-c8cff7252b18&spaceId=a1cdf9f6-20a4-48a7-83c7-eb73c6331a27&width=2000&userId=c77bd267-6a8b-4ad9-9d15-5d212bad7d26&cache=v2)
 
 ## 2. Compromised account
 
@@ -56,14 +57,15 @@ DeviceLogonEvents
 | project Timestamp, AccountName, ActionType, LogonType, ClientIP
 | order by Timestamp asc
 ```
+![image](https://github.com/user-attachments/assets/b31d4652-07d2-4e8e-94fe-f68130bbf5be)
 
-![image.png](attachment:a5d8617e-9733-4d3d-8dd2-65413cb20a0d:image.png)
 
 ## 3. Network Enumeration
 
 On November 19, 2025, at 19:04 UTC (7:04 pm), when first gaining access, the account kenji.sato executed the command `arp -a` via PowerShell on host *azuki-sl*. This command enumerates the local ARP cache to identify IP-to-MAC address mappings of devices on the local network, indicating local network discovery activity following successful access.
 
-![image.png](attachment:e785ffca-fc18-4a00-8afc-f79389640cbd:image.png)
+<img width="1478" height="692" alt="image" src="https://github.com/user-attachments/assets/6515262d-ac52-403e-81da-f7ac879c9d0d" />
+
 
 ### KQL Query used :
 
@@ -82,7 +84,8 @@ and ProcessCommandLine has_any ("arp", "ipconfig", "-a")
 
 On November 19, 2025, the attacker using the compromised kenji.sato account on azuki-sl created and hid the directory C:\ProgramData\WindowsCache at 19:03 UTC (7:03 pm) using attrib.exe +h +s. Immediately after, at 19:03–19:04 UTC (7 pm), they downloaded two malicious files from [http://78.141.196.6:8080](http://78.141.196.6:8080/) into this hidden folder using certutil.exe. At 19:04 UTC (7:04 pm), they established persistence by creating a scheduled task (“Windows Update Check”) that executed a file from the same directory. Shortly after, they attempted data exfiltration at 19:04 UTC by uploading export-data.zip from WindowsCache via curl.exe. These events show that C:\ProgramData\WindowsCache was used as the attacker’s staging location for tools and exfiltration.
 
-![image.png](attachment:869928a9-c523-464b-96ab-7d8f322efe3f:image.png)
+<img width="1790" height="701" alt="image (1)" src="https://github.com/user-attachments/assets/e1790f43-2c4b-4cc5-b387-c7531d87f722" />
+
 
 ### KQL Query Used:
 
@@ -101,7 +104,8 @@ and InitiatingProcessFileName == "powershell.exe"
 
 On 2025-11-19, around 18:49 UTC (6:49 pm), Windows Defender extension exclusions were added on azuki-sl for .exe, .ps1, and .bat, indicating defense evasion by reducing antivirus scanning coverage.
 
-![image.png](attachment:c4c00c33-24ca-4c63-86a1-16244a4efcf8:image.png)
+<img width="1447" height="463" alt="image (2)" src="https://github.com/user-attachments/assets/071f21c7-cc99-4578-8660-0cf668ccd213" />
+
 
 ### KQL Query Used:
 
@@ -117,7 +121,8 @@ DeviceRegistryEvents
 
 On November 19, 2025, around 18:49 UTC (6:49 pm), path exclusions were added to Windows Defender on *azuki-sl* for *C:\ProgramData\WindowsCache* and the user’s Temp directory, indicating defense evasion to avoid antivirus scanning.
 
-![image.png](attachment:97a5edab-f4a8-41c2-ac42-5809f82c0d99:image.png)
+<img width="1463" height="395" alt="image (3)" src="https://github.com/user-attachments/assets/e43d46a6-eb12-477a-a0d4-873b9469b75c" />
+
 
 ### KQL Used:
 
@@ -133,7 +138,8 @@ DeviceRegistryEvents
 
 On **November 19, 2025**, at 7:07 pm UTC,  the attacker used **certutil.exe** via **PowerShell** on *azuki-sl* under the *kenji.sato* account to download external executables into *C:\ProgramData\WindowsCache*, indicating a **living-off-the-land** technique for malicious file transfer and defense evasion.
 
-![image.png](attachment:b27712af-2545-4819-9700-758e9cdb15b5:image.png)
+<img width="2343" height="370" alt="image (4)" src="https://github.com/user-attachments/assets/1ac261dc-ad3b-4b60-8d08-22bf19a76b57" />
+
 
 ### KQL used:
 
@@ -158,7 +164,9 @@ DeviceProcessEvents
 
 On **November 19, 2025**, 7:07 pm UTC,  the attacker used **schtasks.exe** via **PowerShell** on *azuki-sl* under the *kenji.sato* account to create and query a scheduled task (“Windows Update Check”) that executed a malicious file from ***C:\ProgramData\WindowsCache***, indicating **persistence via Task Scheduler**.
 
-![image.png](attachment:f5132246-a4cb-48ab-acda-55067096e073:image.png)
+<img width="2273" height="420" alt="image (5)" src="https://github.com/user-attachments/assets/ebf42ca7-9e50-481c-9a0c-83c2fb9b0653" />
+
+
 
 ### KQL
 
@@ -182,7 +190,8 @@ DeviceProcessEvents
 
 On **November 19, 2025**, at 7:06 pm UTC, the attacker used **certutil.exe** on *azuki-sl* under the *kenji.sato* account to establish a successful outbound connection to the **public IP 78.141.196.6 over port 8080**, indicating communication with an external **command-and-control (C2) server** for payload retrieval.
 
-![image.png](attachment:ddf694a7-2950-4a7d-b95a-98de9d4294b6:image.png)
+<img width="2315" height="497" alt="image (6)" src="https://github.com/user-attachments/assets/dc9c0bd9-1a5a-4076-9659-06bd487874b4" />
+
 
 ### KQL Used:
 
@@ -199,7 +208,8 @@ DeviceNetworkEvents
 
 On **November 19, 2025**, 7:11 pm UTC, a malicious executable located in **C:\ProgramData\WindowsCache** on *azuki-sl* established a successful outbound connection to the public IP **78.141.196.6** over **port 443**, indicating **command-and-control (C2) communication** originating from the attacker’s staged payload.
 
-![image.png](attachment:4151cda0-9834-48ce-a5cf-722dc67aac02:image.png)
+<img width="1555" height="591" alt="image (7)" src="https://github.com/user-attachments/assets/59adb7fa-10ad-47d8-a6f4-684d1be4abbe" />
+
 
 ### KQL used:
 
@@ -216,7 +226,8 @@ DeviceNetworkEvents
 
 On **November 19, 2025**, at 7:07 pm UTC, the attacker staged a **renamed credential-dumping tool (`mm.exe`)** in the directory **C:\ProgramData\WindowsCache** on *azuki-sl*. The short, non-descriptive filename and placement in a hidden staging directory indicate an attempt to evade detection and facilitate **credential dumping via LSASS memory access**.
 
-![image.png](attachment:c6aa6d50-be7f-4214-ac90-e182b07f3822:image.png)
+<img width="1465" height="623" alt="image (8)" src="https://github.com/user-attachments/assets/2a4d5ed3-b817-48c1-8fd4-3d3d9e5a70d8" />
+
 
 ### KQL Used:
 
@@ -235,7 +246,9 @@ DeviceFileEvents
 
 On November 19, 2025, at 7:08 pm UTC, the attacker executed a renamed credential-dumping tool (mm.exe) on azuki-sl using the `sekurlsa::logonpasswords` module, confirming LSASS memory access to extract stored credentials.
 
-![image.png](attachment:cf55ece5-ebda-4ad2-89f1-98da316c68ef:image.png)
+<img width="847" height="242" alt="image (10)" src="https://github.com/user-attachments/assets/9385eb10-7d3b-4878-b21f-7132677bc14f" />
+
+
 
 ### KQL Used:
 
@@ -253,7 +266,8 @@ DeviceProcessEvents
 
 On November 19, 2025, at 7:09 pm UTC, the attacker used curl.exe on azuki-sl to upload the archive export-data.zip to an external Discord webhook URL, indicating staged data collection and outbound exfiltration.
 
-![image.png](attachment:0e768436-c6b6-4c54-964c-5bfa27dfb567:image.png)
+<img width="724" height="238" alt="image (11)" src="https://github.com/user-attachments/assets/5c2a9943-ac7f-4f5c-a7ba-f5ab91e79018" />
+
 
 ### KQL used:
 
@@ -271,7 +285,8 @@ DeviceProcessEvents
 
 On November 19, 2025, at 7:09 pm UTC, the attacker used curl.exe under the compromised account kenji.sato on azuki-sl to upload the archive export-data.zip to an external Discord webhook, confirming outbound data exfiltration to attacker-controlled infrastructure.
 
-![image.png](attachment:d818f6c5-a7b6-4e03-9ddf-b1ac6f67dfd6:image.png)
+<img width="902" height="260" alt="image (12)" src="https://github.com/user-attachments/assets/065b4c50-bfa1-458b-9887-f0a7a6b91254" />
+
 
 ### KQL Used:
 
@@ -289,7 +304,8 @@ and InitiatingProcessCommandLine has_any ("certutil.exe", "export-data.zip")
 
 On November 19, 2025, at 7:11 PM UTC, the attacker executed wevtutil.exe with the command `cl Security on azuki-sl`, clearing the Windows Security event log to remove evidence of prior malicious activity.
 
-![image.png](attachment:5d7a4227-8bf5-45e3-8118-019d965f04b6:image.png)
+<img width="748" height="296" alt="image (13)" src="https://github.com/user-attachments/assets/23452573-5759-4762-b492-da54a9a9865d" />
+
 
 ### KQL used:
 
@@ -308,7 +324,8 @@ DeviceProcessEvents
 
 On November 19, 2025, at 7:09 pm UTC, the attacker created a local user account named support on azuki-sl and added it to the local Administrators group using the commands `net user support /add` and `net localgroup Administrators support /add`, establishing persistent administrative access for future use.
 
-![image.png](attachment:b1e43135-3d1b-4b46-9a51-0c58d6f234d1:image.png)
+<img width="893" height="318" alt="image (14)" src="https://github.com/user-attachments/assets/c7c0c0d8-1f5d-4b1e-849d-d598ed861e07" />
+
 
 ### KQL used:
 
@@ -332,7 +349,8 @@ DeviceProcessEvents
 
 On November 19, 2025, the attacker executed a malicious PowerShell script named wupdate.ps1 on azuki-sl using the command `powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File wupdate.ps1`, automating multiple stages of the attack while bypassing PowerShell security controls.
 
-![image.png](attachment:b9dae781-ff71-40de-8765-149ed957e2d4:image.png)
+<img width="893" height="318" alt="image (15)" src="https://github.com/user-attachments/assets/c4901fad-487f-431b-ac9e-db66ee0b15ee" />
+
 
 KQL Used: 
 
@@ -356,7 +374,8 @@ DeviceFileEvents
 
 On November 19, 2025, between 7:10 pm and 4:06 am UTC, the attacker used the IP address 10.1.0.188 for lateral movement by storing credentials with `cmdkey.exe /generic:10.1.0.188 /user:<username> /pass:<password>` and initiating remote desktop connections using `mstsc.exe /v:10.1.0.188`, indicating authenticated RDP access to another internal system.
 
-![image.png](attachment:7ce18880-136e-42b8-9a63-e3cf5492d14f:image.png)
+<img width="1752" height="622" alt="image (16)" src="https://github.com/user-attachments/assets/f76035b8-6be9-4e4a-99dc-f56c02a01753" />
+
 
 ### KQL Used:
 
@@ -380,7 +399,8 @@ DeviceProcessEvents
 
 On November 19, 2025, at 6:33 pm UTC, the attacker used the built-in Remote Desktop client mstsc.exe on azuki-sl to initiate lateral movement by connecting to the internal system at 10.1.0.188, leveraging native administrative tooling to blend in with legitimate activity.
 
-![image.png](attachment:b74aae57-5584-4e8f-90bc-ca88ee1770b9:image.png)
+<img width="877" height="317" alt="image (17)" src="https://github.com/user-attachments/assets/8e47ae54-e4f0-4a98-8235-64e4b2bb1230" />
+
 
 ### KQL used:
 
