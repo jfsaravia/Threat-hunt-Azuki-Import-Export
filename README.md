@@ -1,3 +1,7 @@
+<img width="500" height="150" alt="image" src="https://github.com/user-attachments/assets/a6da6b0a-4369-4a11-ae42-5e58c3525edf" />
+
+
+
 # Threat Hunt Report (Azuki Import/Export - 梓貿易株式会社)
 
 ## Example Scenario:
