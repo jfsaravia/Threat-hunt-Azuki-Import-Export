@@ -1,7 +1,7 @@
 # Threat Hunt Report (Azuki Import/Export - 梓貿易株式会社)
 
 ## Example Scenario:
-[scenario creation](https://github.com/jfsaravia/Threat-hunt-Azuki-Import-Export/blob/main/Azuki-Import-Scenario)
+[Scenario Creation](https://github.com/jfsaravia/Threat-hunt-Azuki-Import-Export/blob/main/Azuki-Import-Scenario)
 
 Competitor undercut our 6-year shipping contract by exactly 3%. Our supplier contracts and pricing data appeared on underground forums.
 
