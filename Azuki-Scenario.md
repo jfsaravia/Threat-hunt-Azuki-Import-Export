@@ -1,1 +1,196 @@
+# SOC Quick Reference – Bad Actor Activity Summary
 
+1. External actor authenticated to azuki-sl via RDP using compromised credentials (kenji.sato) from IP 88.97.178.12.
+
+2. Performed internal network discovery using arp -a.
+
+3. Created and hid staging directory C:\ProgramData\WindowsCache.
+
+4. Downloaded malicious payloads via certutil.exe from 78.141.196.6:8080.
+
+5. Added Windows Defender exclusions for scripts, executables, and staging paths.
+
+6. Established persistence via scheduled task “Windows Update Check”.
+
+7. Executed malicious PowerShell automation script (wupdate.ps1) with ExecutionPolicy Bypass.
+
+8. Dumped credentials using renamed tool mm.exe with sekurlsa::logonpasswords.
+
+9. Staged data into export-data.zip.
+
+10. Exfiltrated data via curl.exe to Discord webhook.
+
+11. Cleared Windows Security logs using wevtutil.exe.
+
+12. Created local admin account support for persistence.
+
+13. Stored credentials with cmdkey.exe.
+
+14. Moved laterally via RDP (mstsc.exe) to internal host 10.1.0.188.
+
+## MDE Tables Referenced:
+
+| **Parameter** | **Description** |
+| --- | --- |
+| **Name** | DeviceFileEvents |
+| **Info** | https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-deviceinfo-table |
+| **Purpose** | Used to identify malicious file creation, staging activity, renamed executables, script drops, archive creation (export-data.zip), and evidence of tool placement in the attacker staging directory. |
+
+| **Parameter** | **Description** |
+| --- | --- |
+| **Name** | DeviceProcessEvents |
+| **Info** | https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-deviceinfo-table |
+| **Purpose** | Used to detect malicious process execution including credential dumping (mm.exe), PowerShell execution with ExecutionPolicy Bypass, scheduled task creation, use of living-off-the-land binaries (certutil.exe, curl.exe, wevtutil.exe), account creation, and lateral movement via mstsc.exe and cmdkey.exe. |
+
+| **Parameter** | **Description** |
+| --- | --- |
+| **Name** | DeviceNetworkEvents |
+| **Info** | https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-devicenetworkevents-table |
+| **Purpose** | Used to identify outbound connections to external infrastructure, command-and-control communication, data exfiltration over HTTPS, Discord webhook uploads, and internal lateral movement network activity. |
+
+| **Parameter** | **Description** |
+| --- | --- |
+| **Name** | DeviceLogonEvents |
+| **Info** | https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-devicelogonevents-table |
+| **Purpose** | Used to detect unauthorized logon activity including external RDP access, successful authentication from malicious IP addresses, compromised account usage, and lateral movement via RemoteInteractive logons. |
+
+| **Parameter** | **Description** |
+| --- | --- |
+| **Name** | DeviceRegistryEvents |
+| **Info** | https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-deviceregistryevents-table |
+| **Purpose** | Used to detect defense evasion through Windows Defender exclusions, registry-based persistence, and modification of security-related settings to reduce antivirus visibility. |
+
+---
+
+## Detection Queries:
+
+```kql
+// Suspicious external RDP logons to azuki-sl (initial access)
+DeviceLogonEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where LogonType in ("RemoteInteractive", "Network")
+| project TimeGenerated, DeviceName, AccountName, ActionType, LogonType, RemoteIP, FailureReason
+| order by TimeGenerated asc
+
+// Identify RDP sessions from known malicious IP (88.97.178.12)
+DeviceLogonEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| extend ClientIP = coalesce(RemoteIP, InitiatingProcessRemoteSessionIP)
+| where ClientIP == "88.97.178.12"
+| project TimeGenerated, DeviceName, AccountName, ActionType, LogonType, ClientIP
+| order by TimeGenerated asc
+
+// Staging directory usage: WindowsCache referenced in command line (common attacker staging location)
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where ProcessCommandLine has @"C:\ProgramData\WindowsCache"
+| project TimeGenerated, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName
+| order by TimeGenerated asc
+
+// Living-off-the-land file transfer: certutil download into WindowsCache
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where FileName =~ "certutil.exe"
+| where ProcessCommandLine has_any ("-urlcache", "http")
+| where ProcessCommandLine has @"C:\ProgramData\WindowsCache"
+| project TimeGenerated, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessCommandLine
+| order by TimeGenerated asc
+
+// PowerShell defense evasion: ExecutionPolicy Bypass and hidden window usage
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where FileName =~ "powershell.exe"
+| where ProcessCommandLine has_any ("ExecutionPolicy Bypass", "-WindowStyle Hidden")
+| project TimeGenerated, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName
+| order by TimeGenerated asc
+
+// Scheduled Task persistence: schtasks usage (create/query) with WindowsCache references
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where FileName =~ "schtasks.exe"
+| where ProcessCommandLine has_any ("/Create", "/Query", "Windows Update Check", @"C:\ProgramData\WindowsCache")
+| project TimeGenerated, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessCommandLine
+| order by TimeGenerated asc
+
+// Windows Defender exclusions added (extensions + paths)
+DeviceRegistryEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where RegistryKey has @"\Microsoft\Windows Defender\Exclusions\"
+| project TimeGenerated, DeviceName, ActionType, RegistryKey, RegistryValueName
+| order by TimeGenerated asc
+
+// Credential dumping: mm.exe + sekurlsa::logonpasswords
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where ProcessCommandLine has_all ("mm.exe", "sekurlsa::logonpasswords")
+    or InitiatingProcessCommandLine has_all ("mm.exe", "sekurlsa::logonpasswords")
+| project TimeGenerated, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessCommandLine
+| order by TimeGenerated asc
+
+// C2 / payload retrieval: outbound connections to 78.141.196.6 (8080/443)
+DeviceNetworkEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where RemoteIP == "78.141.196.6"
+| project TimeGenerated, DeviceName, ActionType, InitiatingProcessFileName, InitiatingProcessCommandLine, RemoteIP, RemotePort, RemoteUrl
+| order by TimeGenerated asc
+
+// Data exfiltration to Discord webhook using curl + export-data.zip
+DeviceNetworkEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where InitiatingProcessFileName =~ "curl.exe"
+| where InitiatingProcessCommandLine has "export-data.zip"
+| where RemoteUrl has "discord.com/api/webhooks"
+| project TimeGenerated, DeviceName, ActionType, InitiatingProcessAccountName, InitiatingProcessFileName, InitiatingProcessCommandLine, RemoteIP, RemotePort, RemoteUrl
+| order by TimeGenerated asc
+
+// Anti-forensics: Security log cleared using wevtutil
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where FileName =~ "wevtutil.exe"
+| where ProcessCommandLine has "cl Security"
+| project TimeGenerated, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessCommandLine
+| order by TimeGenerated asc
+
+// Persistence: local account created and added to Administrators (support)
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where FileName in~ ("net.exe", "net1.exe")
+| where ProcessCommandLine has_any ("user support", "localgroup Administrators", "/add")
+| project TimeGenerated, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessCommandLine
+| order by TimeGenerated asc
+
+// Lateral movement prep + RDP: cmdkey + mstsc targeting 10.1.0.188
+DeviceProcessEvents
+| where DeviceName == "azuki-sl"
+| where TimeGenerated between (datetime(2025-11-19) .. datetime(2025-11-30))
+| where ProcessCommandLine has_any ("cmdkey", "mstsc", "10.1.0.188")
+| project TimeGenerated, DeviceName, AccountName, FileName, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessCommandLine
+| order by TimeGenerated asc
+
+```
+
+---
+
+## Created By:
+
+- **Author Name**: Juan Saravia
+- **Author Contact**: https://www.linkedin.com/in/juan-francisco-saravia-300634233/
+- **Date**: January 14, 2026
+
+## Validated By:
+
+- **Reviewer Name**:
+- **Reviewer Contact**:
+- **Validation Date**:
