@@ -189,8 +189,8 @@ DeviceProcessEvents
 - **Author Contact**: https://www.linkedin.com/in/juan-francisco-saravia-300634233/
 - **Date**: January 14, 2026
 
-## Validated By:
+<!-- ## Validated By:
 
 - **Reviewer Name**:
 - **Reviewer Contact**:
-- **Validation Date**:
+- **Validation Date**: -->
